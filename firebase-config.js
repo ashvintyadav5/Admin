@@ -17,7 +17,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBrGEtyyOWyNp7rBrtrugCWq6gSXoriYNo",
+    apiKey: "AIzaSyBzD2-uUJZgOnxV5vCUlghele2jdIr_CMY",
     authDomain: "my-photo-gallery-9913a.firebaseapp.com",
     projectId: "my-photo-gallery-9913a",
     storageBucket: "my-photo-gallery-9913a.firebasestorage.app",
