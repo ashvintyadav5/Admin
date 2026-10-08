@@ -8,12 +8,16 @@
     body { font-family: sans-serif; max-width: 800px; margin: 30px auto; padding: 0 20px; background: #fafafa; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
     .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 20px; }
-    input { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-    button { padding: 10px 18px; background: #111; color: white; border: none; border-radius: 6px; cursor: pointer; }
+    input[type="text"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+    button { padding: 10px 18px; background: #111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    button:hover { background: #333; }
     .btn-danger { background: #e53e3e; }
+    .btn-danger:hover { background: #c53030; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
     .photo-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.06); text-align: center; padding-bottom: 10px; }
     .photo-card img { width: 100%; height: 160px; object-fit: cover; }
+    .photo-card h4 { margin: 10px 0; font-size: 14px; }
+    #statusMsg { margin-top: 8px; font-weight: bold; color: #0284c7; }
   </style>
 </head>
 <body>
@@ -23,23 +27,24 @@
   </div>
 
   <div class="card">
-    <h3>नई फोटो जोड़ें</h3>
-    <form id="addPhotoForm">
-      <input type="text" id="photoTitle" placeholder="Photo Title (उदा. Nature Trip)" required>
-      <input type="url" id="photoUrl" placeholder="Direct Image URL (उदा. https://...)" required>
-      <button type="submit" id="saveBtn">Save Photo</button>
+    <h3>Device se photo upload karein</h3>
+    <form id="uploadPhotoForm">
+      <input type="text" id="photoTitle" placeholder="Photo Title (jaise: Nature Trip, Event)" required>
+      <input type="file" id="photoFile" accept="image/*" required>
+      <button type="submit" id="uploadBtn">Upload & Save Photo</button>
+      <p id="statusMsg"></p>
     </form>
   </div>
 
   <div class="card">
-    <h3>आपकी गैलरी की तस्वीरें</h3>
+    <h3>Aapki Gallery ki photos</h3>
     <div id="photosList" class="grid"></div>
   </div>
 
   <script type="module">
     import { supabase } from './supabase-config.js';
 
-    // लॉगिन स्टेटस चेक करें
+    // Auth verification
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -50,36 +55,92 @@
     }
     checkUser();
 
-    // लॉगआउट
+    // Logout action
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await supabase.auth.signOut();
       window.location.href = 'login.html';
     });
 
-    // नई फोटो सेव करें
-    document.getElementById('addPhotoForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const title = document.getElementById('photoTitle').value;
-      const image_url = document.getElementById('photoUrl').value;
+    // Upload & Database Entry
+    const form = document.getElementById('uploadPhotoForm');
+    const statusMsg = document.getElementById('statusMsg');
+    const uploadBtn = document.getElementById('uploadBtn');
 
-      const { error } = await supabase.from('photos').insert([{ title, image_url }]);
-      if (error) {
-        alert(error.message);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('photoFile');
+      const title = document.getElementById('photoTitle').value.trim();
+      const file = fileInput.files[0];
+
+      if (!file) {
+        alert("Kripya ek image file select karein!");
+        return;
+      }
+
+      uploadBtn.disabled = true;
+      uploadBtn.innerText = "Uploading...";
+      statusMsg.innerText = "Upload chal raha hai, kripya intezar karein...";
+
+      // Unique file name generate karein
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${fileExt}`;
+
+      // 1. Storage bucket ('photo') mein file upload
+      const { data: uploadData, error: uploadError } = await supabase
+        .storage
+        .from('photo')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        statusMsg.innerText = "Upload fail: " + uploadError.message;
+        uploadBtn.disabled = false;
+        uploadBtn.innerText = "Upload & Save Photo";
+        return;
+      }
+
+      // 2. Public URL prapt karein
+      const { data: publicUrlData } = supabase
+        .storage
+        .from('photo')
+        .getPublicUrl(fileName);
+
+      const imageUrl = publicUrlData.publicUrl;
+
+      // 3. Database ki 'photos' table mein entry save karein
+      const { error: dbError } = await supabase
+        .from('photos')
+        .insert([{ title: title, image_url: imageUrl }]);
+
+      if (dbError) {
+        statusMsg.innerText = "Database error: " + dbError.message;
       } else {
-        document.getElementById('photoTitle').value = '';
-        document.getElementById('photoUrl').value = '';
+        statusMsg.innerText = "Photo safalta-purvak upload ho gayi!";
+        form.reset();
         loadPhotos();
       }
+
+      uploadBtn.disabled = false;
+      uploadBtn.innerText = "Upload & Save Photo";
     });
 
-    // फोटो लिस्ट लोड करें
+    // Gallery images fetch karein
     async function loadPhotos() {
       const container = document.getElementById('photosList');
-      container.innerHTML = 'लोड हो रहा है...';
+      container.innerHTML = 'Photos load ho rahi hain...';
 
-      const { data, error } = await supabase.from('photos').select('*').order('id', { ascending: false });
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .order('id', { ascending: false });
+
       if (error) {
-        container.innerHTML = 'तस्वीरें लोड करने में विफल!';
+        container.innerHTML = 'Photos load nahi ho payi!';
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<p>Abhi tak koi photo upload nahi ki gayi hai.</p>';
         return;
       }
 
@@ -90,11 +151,12 @@
         div.innerHTML = `
           <img src="${item.image_url}" alt="${item.title}">
           <h4>${item.title}</h4>
-          <button class="btn-danger delete-btn" data-id="${item.id}">Delete</button>
+          <button class="btn-danger delete-btn" data-id="${item.id}" data-url="${item.image_url}">Delete</button>
         `;
         container.appendChild(div);
       });
 
+      // Delete functionality
       document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const id = e.target.getAttribute('data-id');
