@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background: #f4f6f8; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+        }
+        .login-box { 
+            background: #ffffff; 
+            padding: 40px 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.06); 
+            width: 100%; 
+            max-width: 360px; 
+            text-align: center; 
+        }
+        h2 { 
+            margin-bottom: 24px; 
+            color: #111; 
+            font-size: 22px; 
+            font-weight: 700;
+        }
+        input { 
+            width: 100%; 
+            padding: 12px 14px; 
+            margin-bottom: 16px; 
+            border: 1px solid #d1d5db; 
+            border-radius: 6px; 
+            font-size: 14px; 
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: #111;
+        }
+        button.login-btn { 
+            width: 100%; 
+            padding: 12px; 
+            background: #111; 
+            color: #ffffff; 
+            border: none; 
+            border-radius: 6px; 
+            font-size: 15px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
+        button.login-btn:hover { 
+            background: #333; 
+        }
+        #error-msg { 
+            color: #dc2626; 
+            margin-top: 15px; 
+            font-size: 13px; 
+            min-height: 18px;
+        }
+        .back-link { 
+            display: inline-block; 
+            margin-top: 22px; 
+            color: #6b7280; 
+            text-decoration: none; 
+            font-size: 13px; 
+        }
+        .back-link:hover { 
+            text-decoration: underline; 
+            color: #111;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Admin Login</h2>
+    <form id="login-form">
+        <input type="text" id="userid" placeholder="User ID" required autocomplete="username">
+        <input type="password" id="password" placeholder="Password" required autocomplete="current-password">
+        <button type="submit" class="login-btn" id="submit-btn">Login</button>
+    </form>
+    <div id="error-msg"></div>
+    <a href="index.html" class="back-link">← गैलरी पर वापस जाएं</a>
+</div>
+
+<script type="module">
+    import { auth, signInWithEmailAndPassword } from './firebase-config.js';
+
+    const loginForm = document.getElementById('login-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const errorMsg = document.getElementById('error-msg');
+
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userid = document.getElementById('userid').value.trim();
+        const password = document.getElementById('password').value;
+        errorMsg.innerText = '';
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Checking...';
+
+        const adminEmail = `${userid}@mygallery.com`;
+
+        try {
+            await signInWithEmailAndPassword(auth, adminEmail, password);
+            window.location.href = 'admin.html';
+        } catch (err) {
+            console.error("Login failed:", err);
+            errorMsg.innerText = 'गलत User ID या Password!';
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Login';
+        }
+    });
+</script>
+
+</body>
+</html>
