@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Gallery</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #fafafa; 
+            color: #262626; 
+            min-height: 100vh; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        /* Header */
+        header { 
+            background: #ffffff; 
+            padding: 18px 40px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            border-bottom: 1px solid #dbdbdb; 
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 { 
+            font-size: 22px; 
+            font-weight: 700; 
+            letter-spacing: 1.5px; 
+            text-transform: uppercase;
+        }
+        .admin-btn { 
+            background: #111; 
+            color: #fff; 
+            text-decoration: none; 
+            padding: 7px 16px; 
+            border-radius: 6px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            transition: all 0.2s ease; 
+        }
+        .admin-btn:hover { 
+            background: #444; 
+        }
+
+        /* Gallery Grid */
+        main { 
+            flex: 1; 
+            padding: 40px 20px; 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            width: 100%; 
+        }
+        .gallery-container { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+            gap: 24px; 
+        }
+        .photo-card { 
+            background: #ffffff; 
+            border-radius: 10px; 
+            overflow: hidden; 
+            border: 1px solid #eaeaea;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03); 
+            transition: transform 0.2s ease, box-shadow 0.2s ease; 
+        }
+        .photo-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 8px 20px rgba(0,0,0,0.08); 
+        }
+        .photo-card img { 
+            width: 100%; 
+            height: 250px; 
+            object-fit: cover; 
+            display: block; 
+            background-color: #eee;
+        }
+        .photo-card .caption { 
+            padding: 14px; 
+            font-size: 14px; 
+            font-weight: 500; 
+            color: #333; 
+            text-align: center; 
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Footer */
+        footer { 
+            background: #111111; 
+            color: #a8a8a8; 
+            text-align: center; 
+            padding: 40px 20px; 
+            margin-top: auto; 
+        }
+        .social-links { 
+            margin-bottom: 18px; 
+            display: flex; 
+            justify-content: center; 
+            gap: 25px; 
+        }
+        .social-links a { 
+            color: #ffffff; 
+            text-decoration: none; 
+            font-size: 14px; 
+            font-weight: 500;
+            transition: color 0.2s ease; 
+        }
+        .social-links a:hover { 
+            color: #0095f6; 
+        }
+        .copyright { 
+            font-size: 13px; 
+            color: #777777; 
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Gallery</h1>
+    <a href="login.html" class="admin-btn">Admin Login</a>
+</header>
+
+<main>
+    <div class="gallery-container" id="gallery">
+        <p style="text-align:center; grid-column:1/-1; color:#888;">फोटोज़ लोड हो रही हैं...</p>
+    </div>
+</main>
+
+<footer>
+    <div class="social-links">
+        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">Instagram</a>
+        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">Facebook</a>
+    </div>
+    <div class="copyright">
+        © 2026 My Photo Gallery. All rights reserved.
+    </div>
+</footer>
+
+<script type="module">
+    import { db, collection, getDocs, query, orderBy } from './firebase-config.js';
+
+    async function loadGallery() {
+        const gallery = document.getElementById('gallery');
+        try {
+            const q = query(collection(db, "photos"), orderBy("createdAt", "desc"));
+            const snapshot = await getDocs(q);
+
+            if (snapshot.empty) {
+                gallery.innerHTML = '<p style="text-align:center; grid-column:1/-1; color:#888;">अभी कोई फोटो उपलब्ध नहीं है।</p>';
+                return;
+            }
+
+            gallery.innerHTML = '';
+            snapshot.forEach((item) => {
+                const data = item.data();
+                const card = `
+                    <div class="photo-card">
+                        <img src="${data.url}" alt="${data.title || 'Photo'}" loading="lazy">
+                        <div class="caption">${data.title || ''}</div>
+                    </div>
+                `;
+                gallery.innerHTML += card;
+            });
+        } catch (err) {
+            console.error("Gallery load error:", err);
+            gallery.innerHTML = '<p style="text-align:center; grid-column:1/-1; color:red;">तस्वीरें लोड नहीं हो सकीं।</p>';
+        }
+    }
+
+    loadGallery();
+</script>
+
+</body>
+</html>
