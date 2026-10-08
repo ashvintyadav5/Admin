@@ -5,14 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Photo Gallery</title>
   <style>
-    body { font-family: sans-serif; max-width: 1000px; margin: 30px auto; padding: 0 20px; background: #fafafa; }
+    body { font-family: sans-serif; max-width: 1100px; margin: 30px auto; padding: 0 20px; background: #fafafa; }
     .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; }
-    .admin-link { padding: 8px 16px; background: #111; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; }
+    .admin-link { padding: 8px 16px; background: #111; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: bold; }
+    
     .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; margin-top: 30px; }
-    .card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); transition: transform 0.2s; }
-    .card:hover { transform: translateY(-3px); }
+    .card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+    .card:hover { transform: translateY(-4px); box-shadow: 0 8px 18px rgba(0,0,0,0.12); }
     .card img { width: 100%; height: 220px; object-fit: cover; display: block; }
-    .card p { margin: 12px; font-weight: bold; color: #333; }
+    .card-info { padding: 12px; }
+    .card-info h3 { margin: 0 0 6px 0; font-size: 16px; color: #222; }
+    .card-info p { margin: 0; font-size: 13px; color: #666; line-height: 1.4; }
+
+    /* फ़ुल स्क्रीन पॉपअप (Modal / Lightbox) */
+    .lightbox-modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .lightbox-modal img {
+      max-width: 90vw;
+      max-height: 80vh;
+      object-fit: contain;
+      border-radius: 8px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+      animation: zoomIn 0.2s ease;
+    }
+    .lightbox-caption {
+      color: #fff;
+      text-align: center;
+      margin-top: 15px;
+      max-width: 800px;
+    }
+    .lightbox-caption h2 { margin: 0 0 5px 0; font-size: 20px; }
+    .lightbox-caption p { margin: 0; font-size: 14px; color: #ccc; }
+    .close-btn {
+      position: absolute;
+      top: 20px;
+      right: 30px;
+      color: #fff;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      line-height: 1;
+      user-select: none;
+    }
+    .close-btn:hover { color: #e53e3e; }
+
+    @keyframes zoomIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -21,33 +74,95 @@
     <a href="login.html" class="admin-link">Admin Login</a>
   </div>
 
-  <div id="gallery" class="gallery">तस्वीरें लोड हो रही हैं...</div>
+  <div id="gallery" class="gallery">फ़ोटो लोड हो रही हैं...</div>
+
+  <!-- फ़ुल स्क्रीन देखने के लिए पॉपअप विंडो -->
+  <div id="lightbox" class="lightbox-modal">
+    <span class="close-btn" id="closeBtn">&times;</span>
+    <img id="lightboxImg" src="" alt="Full Screen Photo">
+    <div class="lightbox-caption">
+      <h2 id="lightboxTitle"></h2>
+      <p id="lightboxDesc"></p>
+    </div>
+  </div>
 
   <script type="module">
     import { supabase } from './supabase-config.js';
 
+    const galleryContainer = document.getElementById('gallery');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const lightboxTitle = document.getElementById('lightboxTitle');
+    const lightboxDesc = document.getElementById('lightboxDesc');
+    const closeBtn = document.getElementById('closeBtn');
+
+    // फ़ोटो गैलरी लोड करें
     async function fetchGallery() {
-      const container = document.getElementById('gallery');
-      const { data, error } = await supabase.from('photos').select('*').order('id', { ascending: false });
+      const { data, error } = await supabase
+        .from('photos')
+        .select('*')
+        .order('id', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        container.innerHTML = '<p>अभी कोई फोटो उपलब्ध नहीं है।</p>';
+        galleryContainer.innerHTML = '<p>अभी कोई फ़ोटो उपलब्ध नहीं है।</p>';
         return;
       }
 
-      container.innerHTML = '';
+      galleryContainer.innerHTML = '';
       data.forEach(photo => {
-        const item = document.createElement('div');
-        item.className = 'card';
-        item.innerHTML = `
-          <img src="${photo.image_url}" alt="${photo.title}">
-          <p>${photo.title}</p>
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${photo.image_url}" alt="${photo.title || ''}">
+          <div class="card-info">
+            <h3>${photo.title || 'Untitled'}</h3>
+            ${photo.description ? `<p>${photo.description}</p>` : ''}
+          </div>
         `;
-        container.appendChild(item);
+
+        // फ़ोटो पर क्लिक करने पर फ़ुल स्क्रीन खोलें
+        card.addEventListener('click', () => {
+          lightboxImg.src = photo.image_url;
+          lightboxTitle.innerText = photo.title || '';
+          lightboxDesc.innerText = photo.description || '';
+          lightbox.style.display = 'flex';
+          document.body.style.overflow = 'hidden'; // बैकग्राउंड स्क्रोल बंद
+        });
+
+        galleryContainer.appendChild(card);
       });
     }
+
+    // फ़ुल स्क्रीन विंडो बंद करने का तरीका
+    function closeLightbox() {
+      lightbox.style.display = 'none';
+      document.body.style.overflow = 'auto'; // स्क्रोल वापस चालू
+    }
+
+    closeBtn.addEventListener('click', closeLightbox);
+
+    // बाहर खाली जगह पर क्लिक करने पर भी बंद हो जाए
+    lightbox.addEventListener('click', (e) => {
+      if (e.target === lightbox) {
+        closeLightbox();
+      }
+    });
+
+    // कीबोर्ड के 'Esc' बटन से बंद करने के लिए
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && lightbox.style.display === 'flex') {
+        closeLightbox();
+      }
+    });
 
     fetchGallery();
   </script>
 </body>
 </html>
+
+
+
+
+
+
+
