@@ -104,7 +104,7 @@
         submitBtn.disabled = true;
         submitBtn.innerText = 'Checking...';
 
-        const adminEmail = `${userid}@mygallery.com`;
+        const adminEmail = userid;
 
         try {
             await signInWithEmailAndPassword(auth, adminEmail, password);
