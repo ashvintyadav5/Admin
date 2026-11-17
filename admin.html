@@ -37,7 +37,7 @@
   </div>
 
   <div class="card">
-    <h3>Aapki Gallery ki photos</h3>
+    <h3>Imeage Gallery</h3>
     <div id="photosList" class="grid"></div>
   </div>
 
@@ -74,13 +74,13 @@
       const file = fileInput.files[0];
 
       if (!file) {
-        alert("Kripya ek image file select karein!");
+        alert("Please select a file !");
         return;
       }
 
       uploadBtn.disabled = true;
       uploadBtn.innerText = "Uploading...";
-      statusMsg.innerText = "Upload chal raha hai, kripya intezar karein...";
+      statusMsg.innerText = "Uploading, Please wait ...";
 
       // Unique file name generate karein
       const fileExt = file.name.split('.').pop();
@@ -93,7 +93,7 @@
         .upload(fileName, file);
 
       if (uploadError) {
-        statusMsg.innerText = "Upload fail: " + uploadError.message;
+        statusMsg.innerText = "Upload failed: " + uploadError.message;
         uploadBtn.disabled = false;
         uploadBtn.innerText = "Upload & Save Photo";
         return;
@@ -115,7 +115,7 @@
       if (dbError) {
         statusMsg.innerText = "Database error: " + dbError.message;
       } else {
-        statusMsg.innerText = "Ke re shubham!";
+        statusMsg.innerText = "Imeage has been uploaded !";
         form.reset();
         loadPhotos();
       }
@@ -127,7 +127,7 @@
     // Gallery images fetch karein
     async function loadPhotos() {
       const container = document.getElementById('photosList');
-      container.innerHTML = 'Photos load ho rahi hain...';
+      container.innerHTML = 'Loading imeages ...';
 
       const { data, error } = await supabase
         .from('photos')
